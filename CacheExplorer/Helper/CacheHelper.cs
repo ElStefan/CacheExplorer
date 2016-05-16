@@ -11,9 +11,9 @@ namespace CacheExplorer.Helper
 {
     public static class CacheHelper
     {
-        private static string LocalPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        private static readonly string LocalPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         private const string ChromePath = @"\Google\Chrome\User Data\Default\Cache";
-        private static string TempDir = Environment.CurrentDirectory + @"\temp\";
+        private static readonly string TempDir = Environment.CurrentDirectory + @"\temp\";
 
         public static string ChromeCachePath
         {
@@ -22,7 +22,7 @@ namespace CacheExplorer.Helper
                 return LocalPath + ChromePath;
             }
         }
-        public static IEnumerable<CacheFile> GetFiles(bool onlyMp3)
+        public static IEnumerable<CacheFile> GetFiles(bool onlyMP3)
         {
             if(!CreateTempDir())
             {
@@ -31,7 +31,7 @@ namespace CacheExplorer.Helper
 
             var files = Directory.GetFiles(ChromeCachePath, "f_*");
             var cacheFiles = files.Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) }).ToList();
-            if(!onlyMp3)
+            if(!onlyMP3)
             {
                 CleanupTempDir();
                 return cacheFiles;
@@ -78,7 +78,7 @@ namespace CacheExplorer.Helper
             }
         }
 
-        public static bool IsMp3(CacheFile file)
+        private static bool IsMp3(CacheFile file)
         {
             var tempFileName = $"{Guid.NewGuid()}.mp3";
             var tempFile = $@"{TempDir}\{tempFileName}";
@@ -89,12 +89,14 @@ namespace CacheExplorer.Helper
             }
 
             File.WriteAllBytes(tempFile, file.Content);
-            ShellFile so = ShellFile.FromFilePath(tempFile);
+            var so = ShellFile.FromFilePath(tempFile);
             long nanoseconds;
-            long.TryParse(so.Properties.System.Media.Duration.Value.ToString(),
-            out nanoseconds);
+            if(long.TryParse(so.Properties.System.Media.Duration.Value.ToString(),
+            out nanoseconds))
+            {
+                return false;
+            }
 
-            File.Delete(tempFile);
             if (nanoseconds > 0)
             {
                 file.Length = nanoseconds;

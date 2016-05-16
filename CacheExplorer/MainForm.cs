@@ -20,16 +20,15 @@ namespace CacheExplorer
         public MainForm()
         {
             this.InitializeComponent();
-            this.LoadFiles();
-            var timespan = new TimeSpan(1223245);
+            this.LoadFilesAsync();
         }
 
         private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.LoadFiles();
+            this.LoadFilesAsync();
         }
 
-        private async void LoadFiles()
+        private async void LoadFilesAsync()
         {
             this.olvColumnMediaLength.IsVisible = this._onlyMp3;
             var files = await Task.Run(() => CacheHelper.GetFiles(this._onlyMp3));
@@ -39,7 +38,7 @@ namespace CacheExplorer
         private void checkBoxMp3_CheckedChanged(object sender, EventArgs e)
         {
             this._onlyMp3 = this.checkBoxMp3.Checked;
-            this.LoadFiles();
+            this.LoadFilesAsync();
         }
 
         private void saveAsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -55,11 +54,11 @@ namespace CacheExplorer
                 {
                     return;
                 }
-                this.SaveFiles(saveFileDialog, items);
+                SaveFiles(saveFileDialog, items);
             }
         }
 
-        private void SaveFiles(SaveFileDialog saveFileDialog, List<CacheFile> items)
+        private static void SaveFiles(SaveFileDialog saveFileDialog, List<CacheFile> items)
         {
             var content = items.SelectMany(o => o.Content).ToArray();
             File.WriteAllBytes(saveFileDialog.FileName, content);

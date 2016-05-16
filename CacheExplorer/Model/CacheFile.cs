@@ -8,8 +8,11 @@ namespace CacheExplorer.Model
 {
     public class CacheFile
     {
+        public byte[] Content { get; set; }
         public DateTime CreateDate { get; set; }
         public string FileName { get; set; }
+
+        public string FilePath { get; set; }
         public int FileSize
         {
             get
@@ -17,9 +20,6 @@ namespace CacheExplorer.Model
                 return Content.Length;
             }
         }
-
-        public string FilePath { get; set; }
-        public byte[] Content { get; set; }
         public long Length { get; set; }
         public string MediaLength
         {
