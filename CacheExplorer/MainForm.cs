@@ -1,13 +1,12 @@
-﻿using CacheExplorer.Helper;
+﻿using BrightIdeasSoftware;
+using CacheExplorer.Helper;
 using CacheExplorer.Model;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,12 +14,27 @@ namespace CacheExplorer
 {
     public partial class MainForm : Form
     {
-        private bool _onlyMp3;
+        private bool _onlyMediaFiles;
+
+        private static readonly TextOverlay OverlayText = new TextOverlay
+        {
+            BackColor = Color.LightGray,
+            CornerRounding = 5f,
+            BorderColor = Color.Black,
+            BorderWidth = 1.2f,
+            Transparency = 240,
+            Font = new Font("Arial", 14),
+            Text = "Loading...",
+            TextColor = Color.Black
+        };
 
         public MainForm()
         {
             this.InitializeComponent();
-            this.LoadFilesAsync();
+
+            // work in progress
+            // var indexFile = CacheHelper.ReadIndexFile();
+            // var dataFiles = CacheHelper.ReadDataFiles();
         }
 
         private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
@@ -30,14 +44,20 @@ namespace CacheExplorer
 
         private async void LoadFilesAsync()
         {
-            this.olvColumnMediaLength.IsVisible = this._onlyMp3;
-            var files = await Task.Run(() => CacheHelper.GetFiles(this._onlyMp3));
+            this.fastObjectListViewCacheFiles.EmptyListMsg = "";
+            this.fastObjectListViewCacheFiles.OverlayText = OverlayText;
+            this.fastObjectListViewCacheFiles.ClearObjects();
+            this.olvColumnMediaLength.IsVisible = this._onlyMediaFiles;
+            var files = await Task.Run(() => CacheHelper.GetFiles(this._onlyMediaFiles));
             this.fastObjectListViewCacheFiles.SetObjects(files);
             this.fastObjectListViewCacheFiles.RebuildColumns();
+            this.fastObjectListViewCacheFiles.OverlayText = null;
+            this.fastObjectListViewCacheFiles.EmptyListMsg = "No files found";
         }
-        private void checkBoxMp3_CheckedChanged(object sender, EventArgs e)
+
+        private void checkBoxOnlyMedia_CheckedChanged(object sender, EventArgs e)
         {
-            this._onlyMp3 = this.checkBoxMp3.Checked;
+            this._onlyMediaFiles = this.checkBoxOnlyMedia.Checked;
             this.LoadFilesAsync();
         }
 
@@ -47,10 +67,10 @@ namespace CacheExplorer
             using (var saveFileDialog = new SaveFileDialog())
             {
                 saveFileDialog.Title = "Save files as new file";
-                saveFileDialog.FileName = $"CacheFiles{DateTime.Now.ToString("yyyyMMddHHmm")}";
+                saveFileDialog.FileName = $"CacheFiles{DateTime.Now.ToString("yyyyMMddHHmmss")}";
                 saveFileDialog.DefaultExt = "mp3";
                 var result = saveFileDialog.ShowDialog();
-                if(result != DialogResult.OK)
+                if (result != DialogResult.OK)
                 {
                     return;
                 }
@@ -60,8 +80,41 @@ namespace CacheExplorer
 
         private static void SaveFiles(SaveFileDialog saveFileDialog, List<CacheFile> items)
         {
-            var content = items.SelectMany(o => o.Content).ToArray();
-            File.WriteAllBytes(saveFileDialog.FileName, content);
+            for (var i = 0; i < items.Count; i++)
+            {
+                var path = Path.GetDirectoryName(saveFileDialog.FileName);
+                var filename = $@"{path}\{Path.GetFileNameWithoutExtension(saveFileDialog.FileName)}";
+                var extension = Path.GetExtension(saveFileDialog.FileName);
+                if (items.Count > 1)
+                {
+                    filename = $"{filename}_{i}";
+                }
+                filename = $"{filename}{extension}";
+                File.WriteAllBytes(filename, items[i].Content);
+                //RecognizeFile(saveFileDialog.FileName);
+            }
+        }
+
+        private static void RecognizeFile(string filePath)
+        {
+            AcrCloudHelper.RecognizeFile(filePath);
+        }
+
+        private void fastObjectListViewCacheFiles_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy;
+            }
+        }
+
+        private void fastObjectListViewCacheFiles_DragDrop(object sender, DragEventArgs e)
+        {
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            foreach (string file in files)
+            {
+                AcrCloudHelper.RecognizeFile(file);
+            }
         }
     }
 }

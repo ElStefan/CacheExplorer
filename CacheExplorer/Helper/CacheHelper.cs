@@ -1,10 +1,13 @@
-﻿using CacheExplorer.Model;
+﻿using CacheExplorer.Extensions;
+using CacheExplorer.Model;
 using Microsoft.WindowsAPICodePack.Shell;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CacheExplorer.Helper
@@ -15,7 +18,7 @@ namespace CacheExplorer.Helper
         private const string ChromePath = @"\Google\Chrome\User Data\Default\Cache";
         private static readonly string TempDir = Environment.CurrentDirectory + @"\temp\";
 
-        public static string ChromeCachePath
+        private static string ChromeCachePath
         {
             get
             {
@@ -23,7 +26,7 @@ namespace CacheExplorer.Helper
             }
         }
 
-        public static IEnumerable<CacheFile> GetFiles(bool onlyMP3)
+        public static IEnumerable<CacheFile> GetFiles(bool onlyMediaFiles)
         {
             if (!CreateTempDir())
             {
@@ -31,15 +34,15 @@ namespace CacheExplorer.Helper
             }
 
             var files = Directory.GetFiles(ChromeCachePath, "f_*");
-            var cacheFiles = files.Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) }).ToList();
-            if (!onlyMP3)
+            var cacheFiles = files.AsParallel().Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) });
+            if (!onlyMediaFiles)
             {
                 CleanupTempDir();
                 return cacheFiles;
             }
-            var mp3Files = cacheFiles.AsParallel().Where(o => IsMp3(o));
+            var mediaFiles = cacheFiles.Where(o => HasMediaLenght(o));
             CleanupTempDir();
-            return FindFilesAndMerge(mp3Files.ToList());
+            return FindFilesAndMerge(mediaFiles);
         }
 
         private static bool CreateTempDir()
@@ -77,7 +80,7 @@ namespace CacheExplorer.Helper
             }
         }
 
-        private static bool IsMp3(CacheFile file)
+        private static bool HasMediaLenght(CacheFile file)
         {
             var tempFileName = $"{Guid.NewGuid()}.mp3";
             var tempFile = $@"{TempDir}\{tempFileName}";
@@ -90,14 +93,27 @@ namespace CacheExplorer.Helper
             File.WriteAllBytes(tempFile, file.Content);
             var so = ShellFile.FromFilePath(tempFile);
             long nanoseconds;
-            if (so.Properties.System.Media.Duration.Value == null)
+            while (true)
             {
-                return false;
-            }
-            if (!long.TryParse(so.Properties.System.Media.Duration.Value.ToString(),
-            out nanoseconds))
-            {
-                return false;
+                try
+                {
+                    // crashes sometimes
+                    if (so.Properties.System.Media.Duration.Value == null)
+                    {
+                        return false;
+                    }
+
+                    if (!long.TryParse(so.Properties.System.Media.Duration.Value.ToString(),
+                    out nanoseconds))
+                    {
+                        return false;
+                    }
+                    break;
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
             }
 
             if (nanoseconds > 0)
@@ -105,10 +121,11 @@ namespace CacheExplorer.Helper
                 file.Length = nanoseconds;
                 return true;
             }
+
             return false;
         }
 
-        public static List<CacheFile> FindFilesAndMerge(List<CacheFile> files)
+        public static IEnumerable<CacheFile> FindFilesAndMerge(IEnumerable<CacheFile> files)
         {
             var fileParts = FindFiles(files).Where(o => o.Any());
             var mergedFiles = new List<CacheFile>();
@@ -120,7 +137,7 @@ namespace CacheExplorer.Helper
             return mergedFiles;
         }
 
-        private static List<List<CacheFile>> FindFiles(List<CacheFile> files)
+        private static IEnumerable<IEnumerable<CacheFile>> FindFiles(IEnumerable<CacheFile> files)
         {
             var foundFiles = new List<List<CacheFile>>();
 
@@ -141,26 +158,211 @@ namespace CacheExplorer.Helper
                     continue;
                 }
                 currentTime = item.CreateDate;
-                foundFiles.Add(singleFile.ToList());
-                singleFile = new List<CacheFile>();
+                foundFiles.Add(singleFile);
+                singleFile = new List<CacheFile> { item };
             }
             if (singleFile.Any())
             {
-                foundFiles.Add(singleFile.ToList());
+                foundFiles.Add(singleFile);
             }
 
             return foundFiles;
         }
 
-        private static CacheFile Merge(List<CacheFile> files)
+        private static CacheFile Merge(IEnumerable<CacheFile> files)
         {
             var mergedFile = new CacheFile();
             mergedFile.Content = files.SelectMany(o => o.Content).ToArray();
             mergedFile.CreateDate = files.First().CreateDate;
-            mergedFile.FileName = $"mergedFile{mergedFile.CreateDate.ToString("yyyyMMddHHmmss")}";
+            mergedFile.FileName = $"MergedFile{mergedFile.CreateDate.ToString("yyyyMMddHHmmss")}";
             mergedFile.FilePath = null;
             mergedFile.Length = files.Sum(o => o.Length);
             return mergedFile;
         }
+
+        #region UNDER CONSTRUCTION
+
+        public static CacheIndex ReadIndexFile()
+        {
+            using (var stream = new FileStream(ChromeCachePath + @"\Index", FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            {
+                var hexData = new List<string>();
+
+                for (int i = 1; i < Int32.MaxValue; i++)
+                {
+                    var value = stream.ReadByte();
+                    if (value == -1)
+                    {
+                        break;
+                    }
+                    hexData.Add(string.Format("{0:X2}", value));
+                    //if (i % 16 == 0)
+                    //{
+                    //    sb.AppendLine();
+                    //}
+                }
+
+                var cacheIndex = new CacheIndex();
+                cacheIndex.MagicNumber = hexData.Take(4).Reverse().ConvertToString("");
+                cacheIndex.Version = hexData.Skip(4).Take(4).Reverse().ConvertToString("");
+                cacheIndex.Entries = Convert.ToInt32(hexData.Skip(8).Take(4).Reverse().ConvertToString(""), 16);
+                cacheIndex.TotalStoreSize = Convert.ToInt32(hexData.Skip(12).Take(4).Reverse().ConvertToString(""), 16);
+                cacheIndex.LastFile = hexData.Skip(16).Take(4).Reverse().ConvertToString("");
+                cacheIndex.DirtyFlag = hexData.Skip(20).Take(4).Reverse().ConvertToString("");
+                cacheIndex.Storage = hexData.Skip(24).Take(4).Reverse().ConvertToString("");
+                cacheIndex.TableSize = Convert.ToInt32(hexData.Skip(28).Take(4).Reverse().ConvertToString(""), 16);
+                cacheIndex.PreviousCrash = hexData.Skip(32).Take(4).Reverse().ConvertToString("");
+                cacheIndex.TestId = hexData.Skip(36).Take(4).Reverse().ConvertToString("");
+                cacheIndex.CreationTime = hexData.Skip(40).Take(8).Reverse().ConvertToString("");
+                cacheIndex.PaddedContent = hexData.Skip(48).Take(208).Reverse().ConvertToString("");
+                cacheIndex.Pad1 = hexData.Skip(256).Take(8).Reverse().ConvertToString("");
+                cacheIndex.CacheFilledFlag = hexData.Skip(264).Take(4).Reverse().ConvertToString("");
+                cacheIndex.Sizes = hexData.Skip(268).Take(20).Reverse().Split(4).Select(o => o.ConvertToString("")).ToList();
+                cacheIndex.HeadsCacheAddress = hexData.Skip(288).Take(20).Reverse().Split(4).Select(o => o.ConvertToString("")).ToList();
+                cacheIndex.TailsCacheAddress = hexData.Skip(308).Take(20).Reverse().Split(4).Select(o => o.ConvertToString("")).ToList();
+                cacheIndex.TransActionCacheAddress = hexData.Skip(312).Take(4).Reverse().ConvertToString("");
+                cacheIndex.ActualInFlightOperation = hexData.Skip(316).Take(4).Reverse().ConvertToString("");
+                cacheIndex.InFlightOperationList = hexData.Skip(320).Take(4).Reverse().ConvertToString("");
+                cacheIndex.Pad2 = hexData.Skip(324).Take(28).Reverse().ConvertToString("");
+                cacheIndex.CacheAddresses = hexData.Skip(352).Take(4 * cacheIndex.TableSize).Split(32).Select(o => o./*Skip(28).Take(4).*/Reverse().ConvertToString("")).ToList();
+                //cacheIndex.Unknown = hexData.Skip(352).Reverse().ConvertToString("");
+                return cacheIndex;
+            }
+        }
+
+        public static List<CacheData> ReadDataFiles()
+        {
+            var dataFiles = new List<CacheData>();
+            var files = Directory.GetFiles(ChromeCachePath, "data_*");
+            foreach (var filePath in files)
+            {
+                using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                {
+                    var hexData = new List<string>();
+
+                    for (int i = 1; i < Int32.MaxValue; i++)
+                    {
+                        var value = stream.ReadByte();
+                        if (value == -1)
+                        {
+                            break;
+                        }
+                        hexData.Add(string.Format("{0:X2}", value));
+                    }
+                    var cacheData = new CacheData();
+                    cacheData.MagicNumber = hexData.Take(4).Reverse().ConvertToString("");
+                    cacheData.Version = hexData.Skip(4).Take(4).Reverse().ConvertToString("");
+                    cacheData.Index = hexData.Skip(8).Take(2).Reverse().ConvertToString("");
+                    cacheData.NextFile = hexData.Skip(10).Take(2).Reverse().ConvertToString("");
+                    cacheData.BlockSize = Convert.ToInt32(hexData.Skip(12).Take(4).Reverse().ConvertToString(""), 16);
+                    cacheData.NumberOfStoredEntries = Convert.ToInt32(hexData.Skip(16).Take(4).Reverse().ConvertToString(""), 16);
+                    cacheData.MaxNumberOfEntries = Convert.ToInt32(hexData.Skip(20).Take(4).Reverse().ConvertToString(""), 16);
+                    cacheData.Counters = hexData.Skip(36).Take(16).Split(4).Select(o => o.Reverse().ConvertToString("")).ToList();
+                    cacheData.LastPosition = hexData.Skip(52).Take(16).Reverse().ConvertToString("");
+                    cacheData.TrackUpdates = hexData.Skip(56).Take(4).Reverse().ConvertToString("");
+                    cacheData.User = hexData.Skip(60).Take(20).Reverse().ConvertToString("");
+                    cacheData.AllocationBitmap = hexData.Skip(80).Take(2028).Split(4).Select(o => o.Reverse().ConvertToString("")).ToList();
+                    if (filePath.EndsWith("0"))
+                    {
+                        cacheData.RankingsNodes = GetRankingsNodes(hexData.Skip(4 * 2048));
+                    }
+                    else
+                    {
+                        cacheData.CacheEntries = GetCacheEntries(hexData.Skip(4 * 2048));
+                    }
+                    var content = hexData.Skip(4 * 2048).Split(256).Select(o => o.Aggregate((i, j) => j + i)).ToList();
+                    dataFiles.Add(cacheData);
+                }
+            }
+            return dataFiles;
+        }
+
+        private static List<RankingsNode> GetRankingsNodes(IEnumerable<string> source)
+        {
+            var entries = new List<RankingsNode>();
+            var enumerable = source.ToList();
+            while (true)
+            {
+                if (!enumerable.Any())
+                {
+                    break;
+                }
+                var rankingsNode = new RankingsNode();
+                var currentPos = 0;
+                rankingsNode.LastUsed = enumerable.Skip(currentPos).Take(8).Reverse().ConvertToString("");
+                currentPos += 8;
+                rankingsNode.LastModified = enumerable.Skip(currentPos).Take(8).Reverse().ConvertToString("");
+                currentPos += 8;
+                rankingsNode.NextRankingsAddress = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                rankingsNode.PreviousRankingsAddress = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                rankingsNode.CacheEntryCacheAddress = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                rankingsNode.DirtyFlag = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                rankingsNode.SelfHash = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+
+                entries.Add(rankingsNode);
+                enumerable = enumerable.Skip(36).ToList();
+            }
+            return entries;
+        }
+
+        private static List<CacheEntry> GetCacheEntries(IEnumerable<string> source)
+        {
+            var entries = new List<CacheEntry>();
+            var enumerable = source.ToList();
+            while (true)
+            {
+                if (!enumerable.Any())
+                {
+                    break;
+                }
+                var cacheEntry = new CacheEntry();
+                var currentPos = 0;
+                cacheEntry.Hash = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.NextAddress = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.RankingsNode = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.ReuseCount = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.RefetchCount = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.CurrentState = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.CreationDate = enumerable.Skip(currentPos).Take(8).Reverse().ConvertToString("");
+                currentPos += 8;
+                cacheEntry.KeyLength = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.OptionalAddress = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.Size = enumerable.Skip(currentPos).Take(16).Split(4).Select(o => o.Reverse().ConvertToString("")).ToList();
+                currentPos += 16;
+                cacheEntry.CacheAddresses = enumerable.Skip(currentPos).Take(16).Split(4).Select(o => o.Reverse().ConvertToString("")).ToList();
+                currentPos += 16;
+                cacheEntry.EntryFlags = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.Padding = enumerable.Skip(currentPos).Take(16).Split(4).Select(o => o.Reverse().ConvertToString("")).ToList();
+                currentPos += 16;
+                cacheEntry.SelfHash = enumerable.Skip(currentPos).Take(4).Reverse().ConvertToString("");
+                currentPos += 4;
+                cacheEntry.KeyString = enumerable.Skip(currentPos).Take(160).ConvertHexToString(); // last work was here http://www.forensicswiki.org/wiki/Chrome_Disk_Cache_Format
+                currentPos += 160;
+                if (currentPos != 256)
+                {
+                    throw new Exception();
+                }
+
+                entries.Add(cacheEntry);
+                enumerable = enumerable.Skip(256).ToList();
+            }
+            return entries;
+        }
+
+        #endregion UNDER CONSTRUCTION
     }
 }
