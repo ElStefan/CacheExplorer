@@ -34,13 +34,13 @@ namespace CacheExplorer.Helper
             }
 
             var files = Directory.GetFiles(ChromeCachePath, "f_*");
-            var cacheFiles = files.AsParallel().Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) }).ToList();
+            var cacheFiles = files.AsParallel().Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) });
             if (!onlyMediaFiles)
             {
                 CleanupTempDir();
                 return cacheFiles;
             }
-            var mediaFiles = cacheFiles.AsParallel().Where(o => HasMediaLenght(o)).ToList();
+            var mediaFiles = cacheFiles.Where(o => HasMediaLenght(o)).ToList();
             CleanupTempDir();
             return FindFilesAndMerge(mediaFiles);
         }
@@ -140,9 +140,9 @@ namespace CacheExplorer.Helper
         private static IEnumerable<IEnumerable<CacheFile>> FindFiles(IEnumerable<CacheFile> files)
         {
             var foundFiles = new List<List<CacheFile>>();
-
             var singleFile = new List<CacheFile>();
 
+            files = files.OrderBy(o => o.CreateDate);
             var firstFile = files.FirstOrDefault();
             if (firstFile == null)
             {
