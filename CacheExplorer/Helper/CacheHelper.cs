@@ -34,13 +34,13 @@ namespace CacheExplorer.Helper
             }
 
             var files = Directory.GetFiles(ChromeCachePath, "f_*");
-            var cacheFiles = files.AsParallel().Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) });
+            var cacheFiles = files.AsParallel().Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) }).ToList();
             if (!onlyMediaFiles)
             {
                 CleanupTempDir();
                 return cacheFiles;
             }
-            var mediaFiles = cacheFiles.Where(o => HasMediaLenght(o));
+            var mediaFiles = cacheFiles.AsParallel().Where(o => HasMediaLenght(o)).ToList();
             CleanupTempDir();
             return FindFilesAndMerge(mediaFiles);
         }
