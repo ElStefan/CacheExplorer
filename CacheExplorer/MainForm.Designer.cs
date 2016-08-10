@@ -39,6 +39,7 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkBoxOnlyMedia = new System.Windows.Forms.CheckBox();
+            this.checkBoxLastFiveMinutes = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.fastObjectListViewCacheFiles)).BeginInit();
             this.contextMenuStripCacheFiles.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -140,13 +141,24 @@
             // checkBoxOnlyMedia
             // 
             this.checkBoxOnlyMedia.AutoSize = true;
-            this.checkBoxOnlyMedia.Location = new System.Drawing.Point(72, 4);
+            this.checkBoxOnlyMedia.Location = new System.Drawing.Point(204, 4);
             this.checkBoxOnlyMedia.Name = "checkBoxOnlyMedia";
-            this.checkBoxOnlyMedia.Size = new System.Drawing.Size(70, 17);
+            this.checkBoxOnlyMedia.Size = new System.Drawing.Size(99, 17);
             this.checkBoxOnlyMedia.TabIndex = 4;
             this.checkBoxOnlyMedia.Text = "Only media files";
             this.checkBoxOnlyMedia.UseVisualStyleBackColor = true;
             this.checkBoxOnlyMedia.CheckedChanged += new System.EventHandler(this.checkBoxOnlyMedia_CheckedChanged);
+            // 
+            // checkBoxLastFiveMinutes
+            // 
+            this.checkBoxLastFiveMinutes.AutoSize = true;
+            this.checkBoxLastFiveMinutes.Location = new System.Drawing.Point(61, 4);
+            this.checkBoxLastFiveMinutes.Name = "checkBoxLastFiveMinutes";
+            this.checkBoxLastFiveMinutes.Size = new System.Drawing.Size(137, 17);
+            this.checkBoxLastFiveMinutes.TabIndex = 5;
+            this.checkBoxLastFiveMinutes.Text = "Only from last 5 minutes";
+            this.checkBoxLastFiveMinutes.UseVisualStyleBackColor = true;
+            this.checkBoxLastFiveMinutes.CheckedChanged += new System.EventHandler(this.checkBoxLastFiveMinutes_CheckedChanged);
             // 
             // MainForm
             // 
@@ -154,6 +166,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(879, 305);
+            this.Controls.Add(this.checkBoxLastFiveMinutes);
             this.Controls.Add(this.checkBoxOnlyMedia);
             this.Controls.Add(this.fastObjectListViewCacheFiles);
             this.Controls.Add(this.menuStrip1);
@@ -181,6 +194,7 @@
         private System.Windows.Forms.ContextMenuStrip contextMenuStripCacheFiles;
         private System.Windows.Forms.ToolStripMenuItem saveAsToolStripMenuItem;
         private BrightIdeasSoftware.OLVColumn olvColumnMediaLength;
+        private System.Windows.Forms.CheckBox checkBoxLastFiveMinutes;
     }
 }
 

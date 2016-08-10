@@ -66,6 +66,7 @@
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -85,6 +86,8 @@
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Helper\AcrCloudHelper.cs" />
+    <Compile Include="Helper\iTunesHelper.cs" />
+    <Compile Include="Model\iTunesSearchResult.cs" />
     <Compile Include="Model\RankingsNode.cs" />
     <Compile Include="Model\AcrCloudRecognizer.cs" />
     <Compile Include="MainForm.cs">

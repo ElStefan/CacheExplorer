@@ -15,6 +15,7 @@ namespace CacheExplorer
     public partial class MainForm : Form
     {
         private bool _onlyMediaFiles;
+        private bool _lastFiveMinuteFiles;
 
         private static readonly TextOverlay OverlayText = new TextOverlay
         {
@@ -48,7 +49,12 @@ namespace CacheExplorer
             this.fastObjectListViewCacheFiles.OverlayText = OverlayText;
             this.fastObjectListViewCacheFiles.ClearObjects();
             this.olvColumnMediaLength.IsVisible = this._onlyMediaFiles;
-            var files = await Task.Run(() => CacheHelper.GetFiles(this._onlyMediaFiles));
+            DateTime? fromDate = null;
+            if (this._lastFiveMinuteFiles)
+            {
+                fromDate = DateTime.Now.AddMinutes(-5);
+            }
+            var files = await Task.Run(() => CacheHelper.GetFiles(this._onlyMediaFiles, fromDate));
             this.fastObjectListViewCacheFiles.SetObjects(files);
             this.fastObjectListViewCacheFiles.RebuildColumns();
             this.fastObjectListViewCacheFiles.OverlayText = null;
@@ -59,6 +65,11 @@ namespace CacheExplorer
         {
             this._onlyMediaFiles = this.checkBoxOnlyMedia.Checked;
             this.LoadFilesAsync();
+        }
+
+        private void checkBoxLastFiveMinutes_CheckedChanged(object sender, EventArgs e)
+        {
+            this._lastFiveMinuteFiles = this.checkBoxLastFiveMinutes.Checked;
         }
 
         private void saveAsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -91,7 +102,7 @@ namespace CacheExplorer
                 }
                 filename = $"{filename}{extension}";
                 File.WriteAllBytes(filename, items[i].Content);
-                //RecognizeFile(saveFileDialog.FileName);
+                RecognizeFile(saveFileDialog.FileName);
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using CacheExplorer.Model;
+﻿using CacheExplorer.Extensions;
+using CacheExplorer.Model;
 using Microsoft.WindowsAPICodePack.Shell;
 using Newtonsoft.Json;
 using System;
@@ -48,16 +49,41 @@ namespace CacheExplorer.Helper
                 return;
             }
 
+            var iTunesSuggestions = iTunesHelper.GetResults(musicInfo.Artists.Select(o => o.Name).Aggregate((i, j) => i + " " + j), musicInfo.Title, musicInfo.Album.Name);
+            iTunesSuggestions = iTunesSuggestions.OrderBy(o => o.trackName.Similarity(musicInfo.Title));
+            var bestMatch = iTunesSuggestions.FirstOrDefault(o => String.IsNullOrEmpty(o.collectionArtistName) || !o.collectionArtistName.Equals("Various Artists", StringComparison.OrdinalIgnoreCase));
+            if (bestMatch == null)
+            {
+                bestMatch = iTunesSuggestions.FirstOrDefault();
+            }
+
             using (var file = File.Create(filePath))
             {
                 file.Tag.Title = musicInfo.Title;
                 file.Tag.Album = musicInfo.Album.Name;
                 file.Tag.Performers = musicInfo.Artists.Select(o => o.Name).ToArray();
                 file.Tag.Genres = musicInfo.Genres?.Select(o => o.Name).ToArray() ?? new string[] { };
-                DateTime result;
-                if (DateTime.TryParse(musicInfo.ReleaseDate, out result))
+                DateTime date1;
+                if (DateTime.TryParse(musicInfo.ReleaseDate, out date1))
                 {
-                    file.Tag.Year = Convert.ToUInt32(result.Year);
+                    file.Tag.Year = Convert.ToUInt32(date1.Year);
+                }
+                if (bestMatch != null)
+                {
+                    file.Tag.Title = bestMatch.trackName;
+                    file.Tag.Album = bestMatch.collectionName;
+                    file.Tag.Performers = new[] { bestMatch.artistName };
+                    file.Tag.Disc = (uint)bestMatch.discNumber;
+                    file.Tag.DiscCount = (uint)bestMatch.discCount;
+                    file.Tag.Genres = new[] { bestMatch.primaryGenreName };
+                    file.Tag.Track = (uint)bestMatch.trackNumber;
+                    file.Tag.TrackCount = (uint)bestMatch.trackCount;
+
+                    DateTime date2;
+                    if (DateTime.TryParse(bestMatch.releaseDate, out date2))
+                    {
+                        file.Tag.Year = Convert.ToUInt32(date2.Year);
+                    }
                 }
 
                 file.Save();

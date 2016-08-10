@@ -20,4 +20,5 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CC0091:Use static method", Justification = "<Pending>", Scope = "member", Target = "~M:CacheExplorer.MainForm.fastObjectListViewCacheFiles_DragEnter(System.Object,System.Windows.Forms.DragEventArgs)")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CC0091:Use static method", Justification = "<Pending>", Scope = "member", Target = "~M:CacheExplorer.MainForm.fastObjectListViewCacheFiles_DragDrop(System.Object,System.Windows.Forms.DragEventArgs)")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CC0021:Use nameof", Justification = "<Pending>", Scope = "member", Target = "~M:CacheExplorer.Helper.AcrCloudHelper.RecognizeFile(System.String)")]
+[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "S101:Types should be named in camel case", Justification = "<Pending>", Scope = "type", Target = "~T:CacheExplorer.Helper.iTunesHelper")]
 

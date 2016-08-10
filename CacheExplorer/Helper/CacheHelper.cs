@@ -26,7 +26,7 @@ namespace CacheExplorer.Helper
             }
         }
 
-        public static IEnumerable<CacheFile> GetFiles(bool onlyMediaFiles)
+        public static IEnumerable<CacheFile> GetFiles(bool onlyMediaFiles, DateTime? fromDate)
         {
             if (!CreateTempDir())
             {
@@ -35,6 +35,10 @@ namespace CacheExplorer.Helper
 
             var files = Directory.GetFiles(ChromeCachePath, "f_*");
             var cacheFiles = files.AsParallel().Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) });
+            if (fromDate.HasValue)
+            {
+                cacheFiles = cacheFiles.Where(o => o.CreateDate >= fromDate.Value);
+            }
             if (!onlyMediaFiles)
             {
                 CleanupTempDir();
@@ -82,6 +86,23 @@ namespace CacheExplorer.Helper
 
         private static bool HasMediaLenght(CacheFile file)
         {
+            // using taglib to find files with media length but duration seems to be wrong..
+            try
+            {
+                using (var tagFile = TagLib.File.Create(file.FilePath, "taglib/mp3", TagLib.ReadStyle.Average))
+                {
+                    file.Length = tagFile.Properties.Duration.Ticks;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+                //ignore
+            }
+
+            // so if taglib found a valid file, we let the shell check for real duration
+            // this part will hurt every ssd..
+
             var tempFileName = $"{Guid.NewGuid()}.mp3";
             var tempFile = $@"{TempDir}\{tempFileName}";
 
@@ -92,6 +113,7 @@ namespace CacheExplorer.Helper
 
             File.WriteAllBytes(tempFile, file.Content);
             var so = ShellFile.FromFilePath(tempFile);
+
             long nanoseconds;
             while (true)
             {
