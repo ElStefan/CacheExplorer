@@ -40,6 +40,7 @@
             this.refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkBoxOnlyMedia = new System.Windows.Forms.CheckBox();
             this.checkBoxLastFiveMinutes = new System.Windows.Forms.CheckBox();
+            this.saveAsSingleFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.fastObjectListViewCacheFiles)).BeginInit();
             this.contextMenuStripCacheFiles.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -108,14 +109,15 @@
             // contextMenuStripCacheFiles
             // 
             this.contextMenuStripCacheFiles.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.saveAsToolStripMenuItem});
+            this.saveAsToolStripMenuItem,
+            this.saveAsSingleFileToolStripMenuItem});
             this.contextMenuStripCacheFiles.Name = "contextMenuStripCacheFiles";
-            this.contextMenuStripCacheFiles.Size = new System.Drawing.Size(122, 26);
+            this.contextMenuStripCacheFiles.Size = new System.Drawing.Size(175, 70);
             // 
             // saveAsToolStripMenuItem
             // 
             this.saveAsToolStripMenuItem.Name = "saveAsToolStripMenuItem";
-            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(121, 22);
+            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.saveAsToolStripMenuItem.Text = "Save as...";
             this.saveAsToolStripMenuItem.Click += new System.EventHandler(this.saveAsToolStripMenuItem_Click);
             // 
@@ -160,6 +162,13 @@
             this.checkBoxLastFiveMinutes.UseVisualStyleBackColor = true;
             this.checkBoxLastFiveMinutes.CheckedChanged += new System.EventHandler(this.checkBoxLastFiveMinutes_CheckedChanged);
             // 
+            // saveAsSingleFileToolStripMenuItem
+            // 
+            this.saveAsSingleFileToolStripMenuItem.Name = "saveAsSingleFileToolStripMenuItem";
+            this.saveAsSingleFileToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.saveAsSingleFileToolStripMenuItem.Text = "Save as single file...";
+            this.saveAsSingleFileToolStripMenuItem.Click += new System.EventHandler(this.saveAsSingleFileToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AllowDrop = true;
@@ -195,6 +204,7 @@
         private System.Windows.Forms.ToolStripMenuItem saveAsToolStripMenuItem;
         private BrightIdeasSoftware.OLVColumn olvColumnMediaLength;
         private System.Windows.Forms.CheckBox checkBoxLastFiveMinutes;
+        private System.Windows.Forms.ToolStripMenuItem saveAsSingleFileToolStripMenuItem;
     }
 }
 

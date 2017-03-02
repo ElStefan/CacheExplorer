@@ -74,6 +74,11 @@ namespace CacheExplorer
 
         private void saveAsToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            SaveFile(false);
+        }
+
+        private void SaveFile(bool merge)
+        {
             var items = this.fastObjectListViewCacheFiles.SelectedObjects.Cast<CacheFile>().ToList();
             using (var saveFileDialog = new SaveFileDialog())
             {
@@ -85,11 +90,11 @@ namespace CacheExplorer
                 {
                     return;
                 }
-                SaveFiles(saveFileDialog, items);
+                SaveFiles(saveFileDialog, items, merge);
             }
         }
 
-        private static void SaveFiles(SaveFileDialog saveFileDialog, List<CacheFile> items)
+        private static void SaveFiles(SaveFileDialog saveFileDialog, List<CacheFile> items, bool merge)
         {
             for (var i = 0; i < items.Count; i++)
             {
@@ -100,9 +105,20 @@ namespace CacheExplorer
                 {
                     filename = $"{filename}_{i}";
                 }
+
+                byte[] content;
+                if (merge)
+                {
+                    content = items.SelectMany(o => o.Content).ToArray();
+                }
+                else
+                {
+                    content = items[i].Content;
+                }
+
                 filename = $"{filename}{extension}";
-                File.WriteAllBytes(filename, items[i].Content);
-                RecognizeFile(saveFileDialog.FileName);
+                File.WriteAllBytes(filename, content);
+                RecognizeFile(filename);
             }
         }
 
@@ -126,6 +142,11 @@ namespace CacheExplorer
             {
                 AcrCloudHelper.RecognizeFile(file);
             }
+        }
+
+        private void saveAsSingleFileToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SaveFile(true);
         }
     }
 }
