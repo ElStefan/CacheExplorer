@@ -27,6 +27,11 @@ namespace CacheExplorer.Helper
                 var content = result.Content.ReadAsStringAsync().Result;
                 var searchResult = JsonConvert.DeserializeObject<iTunesSearchResult>(content);
 
+                if (searchResult.resultCount == 0 && title.Contains("("))
+                {
+                    title = title.Substring(0, title.IndexOf("(", StringComparison.Ordinal));
+                    return GetResults(interpret, title, album);
+                }
                 if (searchResult.resultCount == 0 && !String.IsNullOrEmpty(album))
                 {
                     return GetResults(interpret, title, string.Empty);
