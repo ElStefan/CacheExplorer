@@ -23,6 +23,7 @@ namespace CacheExplorer.Helper
             get
             {
                 return LocalPath + ChromePath;
+                //return @"F:\temp\test";
             }
         }
 
@@ -89,60 +90,64 @@ namespace CacheExplorer.Helper
             // using taglib to find files with media length but duration seems to be wrong..
             try
             {
-                using (var tagFile = TagLib.File.Create(file.FilePath, "taglib/mp3", TagLib.ReadStyle.Average))
+                using (var tagFile = TagLib.File.Create(file.FilePath, "taglib/mp4", TagLib.ReadStyle.Average))
                 {
                     file.Length = tagFile.Properties.Duration.Ticks;
                 }
             }
             catch (Exception)
             {
+                if(file.FileSize % 32768 == 0)
+                {
+                    return true;
+                }
                 return false;
                 //ignore
             }
-
+            return true;
             // so if taglib found a valid file, we let the shell check for real duration
             // this part will hurt every ssd..
 
-            var tempFileName = $"{Guid.NewGuid()}.mp3";
-            var tempFile = $@"{TempDir}\{tempFileName}";
+            //var tempFileName = $"{Guid.NewGuid()}.m4a";
+            //var tempFile = $@"{TempDir}\{tempFileName}";
 
-            if (!Directory.Exists(TempDir))
-            {
-                return false;
-            }
+            //if (!Directory.Exists(TempDir))
+            //{
+            //    return false;
+            //}
+            //File.WriteAllBytes(tempFile, file.Content);
+            //var so = ShellFile.FromFilePath(tempFile);
 
-            File.WriteAllBytes(tempFile, file.Content);
-            var so = ShellFile.FromFilePath(tempFile);
+            //long nanoseconds;
+            //while (true)
+            //{
+            //    try
+            //    {
+                    
+            //        // crashes sometimes
+            //        if (so.Properties.System.Media.Duration.Value == null)
+            //        {
+            //            return false;
+            //        }
 
-            long nanoseconds;
-            while (true)
-            {
-                try
-                {
-                    // crashes sometimes
-                    if (so.Properties.System.Media.Duration.Value == null)
-                    {
-                        return false;
-                    }
+            //        if (!long.TryParse(so.Properties.System.Media.Duration.Value.ToString(),
+            //        out nanoseconds))
+            //        {
+            //            return false;
+            //        }
+            //        break;
+            //    }
+            //    catch (Exception)
+            //    {
+            //        continue;
+            //    }
+            //}
 
-                    if (!long.TryParse(so.Properties.System.Media.Duration.Value.ToString(),
-                    out nanoseconds))
-                    {
-                        return false;
-                    }
-                    break;
-                }
-                catch (Exception)
-                {
-                    continue;
-                }
-            }
-
-            if (nanoseconds > 0)
-            {
-                file.Length = nanoseconds;
-                return true;
-            }
+            //if (nanoseconds > 0 || file.Length > 0)
+            //{
+            //    file.Length = nanoseconds;
+            //    return true;
+            //}
 
             return false;
         }

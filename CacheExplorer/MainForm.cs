@@ -34,7 +34,7 @@ namespace CacheExplorer
             this.InitializeComponent();
 
             // work in progress
-            // var indexFile = CacheHelper.ReadIndexFile();
+             // var indexFile = CacheHelper.ReadIndexFile();
             // var dataFiles = CacheHelper.ReadDataFiles();
         }
 
@@ -84,7 +84,7 @@ namespace CacheExplorer
             {
                 saveFileDialog.Title = "Save files as new file";
                 saveFileDialog.FileName = $"CacheFiles{DateTime.Now.ToString("yyyyMMddHHmmss")}";
-                saveFileDialog.DefaultExt = "mp3";
+                saveFileDialog.DefaultExt = "m4a";
                 var result = saveFileDialog.ShowDialog();
                 if (result != DialogResult.OK)
                 {
@@ -110,15 +110,24 @@ namespace CacheExplorer
                 if (merge)
                 {
                     content = items.SelectMany(o => o.Content).ToArray();
+                    i = items.Count;
+                    filename = $@"{path}\{Path.GetFileNameWithoutExtension(saveFileDialog.FileName)}";
                 }
                 else
                 {
                     content = items[i].Content;
                 }
 
-                filename = $"{filename}{extension}";
-                File.WriteAllBytes(filename, content);
-                RecognizeFile(filename);
+                var fullFilename = $"{filename}{extension}";
+                File.WriteAllBytes(fullFilename, content);
+
+                if(extension.EndsWith("m4a", StringComparison.OrdinalIgnoreCase))
+                {
+                    ConvertM4A(fullFilename);
+                    fullFilename = $"{filename}.mp3";
+                }
+
+                RecognizeFile(fullFilename);
             }
         }
 
@@ -143,6 +152,19 @@ namespace CacheExplorer
                 AcrCloudHelper.RecognizeFile(file);
             }
         }
+
+        private static void ConvertM4A(string sourceFile)
+        {
+            using (var engine = new MediaToolkit.Engine())
+            {
+                var newFileName = sourceFile.Replace("m4a","mp3");
+
+                engine.CustomCommand($@"-i ""{sourceFile}"" -acodec libmp3lame -ab 320k {newFileName}");
+                
+                File.Delete(sourceFile);
+            }
+        }
+
 
         private void saveAsSingleFileToolStripMenuItem_Click(object sender, EventArgs e)
         {

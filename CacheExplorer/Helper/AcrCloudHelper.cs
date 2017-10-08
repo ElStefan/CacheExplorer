@@ -50,7 +50,7 @@ namespace CacheExplorer.Helper
             }
 
             var iTunesSuggestions = iTunesHelper.GetResults(musicInfo.Artists.Select(o => o.Name).Aggregate((i, j) => i + " " + j), musicInfo.Title, musicInfo.Album.Name);
-            iTunesSuggestions = iTunesSuggestions.OrderBy(o => o.trackName.Similarity(musicInfo.Title));
+            iTunesSuggestions = iTunesSuggestions.OrderBy(o => o.trackName.Similarity(musicInfo.Title)).ThenBy(o => o.collectionName.Similarity(musicInfo.Album.Name));
             var bestMatch = iTunesSuggestions.FirstOrDefault(o => String.IsNullOrEmpty(o.collectionArtistName) || !o.collectionArtistName.Equals("Various Artists", StringComparison.OrdinalIgnoreCase));
             if (bestMatch == null)
             {
@@ -78,6 +78,11 @@ namespace CacheExplorer.Helper
                     file.Tag.Genres = new[] { bestMatch.primaryGenreName };
                     file.Tag.Track = (uint)bestMatch.trackNumber;
                     file.Tag.TrackCount = (uint)bestMatch.trackCount;
+                    var albumArt = WebHelper.GetPicture(bestMatch.artworkUrl100);
+                        if (albumArt != null)
+                    {
+                        file.Tag.Pictures = new IPicture[] { albumArt };
+                    }
 
                     DateTime date2;
                     if (DateTime.TryParse(bestMatch.releaseDate, out date2))

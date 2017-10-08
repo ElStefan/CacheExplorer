@@ -26,7 +26,7 @@ namespace CacheExplorer.Helper
                 var result = client.GetAsync(baseUrl + urlEncodedQuery + "&media=music&country=AT").Result;
                 var content = result.Content.ReadAsStringAsync().Result;
                 var searchResult = JsonConvert.DeserializeObject<iTunesSearchResult>(content);
-
+                searchResult.results = searchResult.results.Where(o => o.kind == "song").ToList();
                 if (searchResult.resultCount == 0 && title.Contains("("))
                 {
                     title = title.Substring(0, title.IndexOf("(", StringComparison.Ordinal));
