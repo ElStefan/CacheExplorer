@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.fastObjectListViewCacheFiles = new BrightIdeasSoftware.FastObjectListView();
             this.olvColumnCreateDate = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
             this.olvColumnFileName = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
@@ -36,11 +37,11 @@
             this.olvColumnFileSize = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
             this.contextMenuStripCacheFiles = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.saveAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveAsSingleFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.refreshToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkBoxOnlyMedia = new System.Windows.Forms.CheckBox();
             this.checkBoxLastFiveMinutes = new System.Windows.Forms.CheckBox();
-            this.saveAsSingleFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.fastObjectListViewCacheFiles)).BeginInit();
             this.contextMenuStripCacheFiles.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -112,7 +113,7 @@
             this.saveAsToolStripMenuItem,
             this.saveAsSingleFileToolStripMenuItem});
             this.contextMenuStripCacheFiles.Name = "contextMenuStripCacheFiles";
-            this.contextMenuStripCacheFiles.Size = new System.Drawing.Size(175, 70);
+            this.contextMenuStripCacheFiles.Size = new System.Drawing.Size(175, 48);
             // 
             // saveAsToolStripMenuItem
             // 
@@ -120,6 +121,13 @@
             this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
             this.saveAsToolStripMenuItem.Text = "Save as...";
             this.saveAsToolStripMenuItem.Click += new System.EventHandler(this.saveAsToolStripMenuItem_Click);
+            // 
+            // saveAsSingleFileToolStripMenuItem
+            // 
+            this.saveAsSingleFileToolStripMenuItem.Name = "saveAsSingleFileToolStripMenuItem";
+            this.saveAsSingleFileToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
+            this.saveAsSingleFileToolStripMenuItem.Text = "Save as single file...";
+            this.saveAsSingleFileToolStripMenuItem.Click += new System.EventHandler(this.saveAsSingleFileToolStripMenuItem_Click);
             // 
             // menuStrip1
             // 
@@ -162,13 +170,6 @@
             this.checkBoxLastFiveMinutes.UseVisualStyleBackColor = true;
             this.checkBoxLastFiveMinutes.CheckedChanged += new System.EventHandler(this.checkBoxLastFiveMinutes_CheckedChanged);
             // 
-            // saveAsSingleFileToolStripMenuItem
-            // 
-            this.saveAsSingleFileToolStripMenuItem.Name = "saveAsSingleFileToolStripMenuItem";
-            this.saveAsSingleFileToolStripMenuItem.Size = new System.Drawing.Size(174, 22);
-            this.saveAsSingleFileToolStripMenuItem.Text = "Save as single file...";
-            this.saveAsSingleFileToolStripMenuItem.Click += new System.EventHandler(this.saveAsSingleFileToolStripMenuItem_Click);
-            // 
             // MainForm
             // 
             this.AllowDrop = true;
@@ -179,6 +180,7 @@
             this.Controls.Add(this.checkBoxOnlyMedia);
             this.Controls.Add(this.fastObjectListViewCacheFiles);
             this.Controls.Add(this.menuStrip1);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "MainForm";
             this.Text = "CacheExplorer";

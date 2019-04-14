@@ -1,6 +1,4 @@
-﻿using CacheExplorer.Extensions;
-using CacheExplorer.Model;
-using Microsoft.WindowsAPICodePack.Shell;
+﻿using CacheExplorer.Model;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -12,13 +10,13 @@ namespace CacheExplorer.Helper
 {
     public static class AcrCloudHelper
     {
-        public static void RecognizeFile(string filePath)
+        public static Result RecognizeFile(string filePath)
         {
             var accessKey = ConfigurationManager.AppSettings.Get("AcrCloudAccessKey");
             var accessSecret = ConfigurationManager.AppSettings.Get("AcrCloudAccessSecret");
             if (string.IsNullOrEmpty(accessKey) || string.IsNullOrEmpty(accessSecret))
             {
-                return;
+                return null;
             }
 
             var config = new Dictionary<string, object>();
@@ -33,66 +31,26 @@ namespace CacheExplorer.Helper
             var audioInfos = JsonConvert.DeserializeObject<AcrResult>(result);
             if (audioInfos == null)
             {
-                return;
+                return  null;
             }
-            if (audioInfos.Status.Msg.Equals("success", StringComparison.OrdinalIgnoreCase))
+            if (!audioInfos.Status.Msg.Equals("success", StringComparison.OrdinalIgnoreCase))
             {
-                SetFileInfos(filePath, audioInfos);
+                audioInfos = null;
             }
+            var musicInfo = audioInfos?.Metadata.Music.OrderBy(o => o.ReleaseDate).FirstOrDefault();
+            if(musicInfo == null)
+            {
+                return null;
+            }
+            var artists = musicInfo?.Artists.Select(o => o.Name).ToList();
+            var title = musicInfo?.Title;
+            var album = musicInfo?.Album.Name;
+            var genres = musicInfo?.Genres?.Select(o => o.Name).ToList();
+            var releaseDate = musicInfo?.ReleaseDate;
+
+            return new Result { artistName = artists.FirstOrDefault(), trackName = title, collectionName = album, primaryGenreName = genres.FirstOrDefault(), releaseDate = releaseDate };
         }
 
-        private static void SetFileInfos(string filePath, AcrResult audioInfos)
-        {
-            var musicInfo = audioInfos.Metadata.Music.OrderBy(o => o.ReleaseDate).FirstOrDefault();
-            if (musicInfo == null)
-            {
-                return;
-            }
-
-            var iTunesSuggestions = iTunesHelper.GetResults(musicInfo.Artists.Select(o => o.Name).Aggregate((i, j) => i + " " + j), musicInfo.Title, musicInfo.Album.Name);
-            iTunesSuggestions = iTunesSuggestions.OrderBy(o => o.trackName.Similarity(musicInfo.Title)).ThenBy(o => o.collectionName.Similarity(musicInfo.Album.Name));
-            var bestMatch = iTunesSuggestions.FirstOrDefault(o => String.IsNullOrEmpty(o.collectionArtistName) || !o.collectionArtistName.Equals("Various Artists", StringComparison.OrdinalIgnoreCase));
-            if (bestMatch == null)
-            {
-                bestMatch = iTunesSuggestions.FirstOrDefault();
-            }
-
-            using (var file = File.Create(filePath))
-            {
-                file.Tag.Title = musicInfo.Title;
-                file.Tag.Album = musicInfo.Album.Name;
-                file.Tag.Performers = musicInfo.Artists.Select(o => o.Name).ToArray();
-                file.Tag.Genres = musicInfo.Genres?.Select(o => o.Name).ToArray() ?? new string[] { };
-                DateTime date1;
-                if (DateTime.TryParse(musicInfo.ReleaseDate, out date1))
-                {
-                    file.Tag.Year = Convert.ToUInt32(date1.Year);
-                }
-                if (bestMatch != null)
-                {
-                    file.Tag.Title = bestMatch.trackName;
-                    file.Tag.Album = bestMatch.collectionName;
-                    file.Tag.Performers = new[] { bestMatch.artistName };
-                    file.Tag.Disc = (uint)bestMatch.discNumber;
-                    file.Tag.DiscCount = (uint)bestMatch.discCount;
-                    file.Tag.Genres = new[] { bestMatch.primaryGenreName };
-                    file.Tag.Track = (uint)bestMatch.trackNumber;
-                    file.Tag.TrackCount = (uint)bestMatch.trackCount;
-                    var albumArt = WebHelper.GetPicture(bestMatch.artworkUrl100);
-                        if (albumArt != null)
-                    {
-                        file.Tag.Pictures = new IPicture[] { albumArt };
-                    }
-
-                    DateTime date2;
-                    if (DateTime.TryParse(bestMatch.releaseDate, out date2))
-                    {
-                        file.Tag.Year = Convert.ToUInt32(date2.Year);
-                    }
-                }
-
-                file.Save();
-            }
-        }
+        
     }
 }

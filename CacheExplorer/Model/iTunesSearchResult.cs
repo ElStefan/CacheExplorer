@@ -40,6 +40,8 @@ namespace CacheExplorer.Model
         public string currency { get; set; }
         public string primaryGenreName { get; set; }
         public bool isStreamable { get; set; }
+        public string lyrics { get; set; }
+        public bool GpmdpDataAvailable { get; set; }
     }
 
     public class iTunesSearchResult

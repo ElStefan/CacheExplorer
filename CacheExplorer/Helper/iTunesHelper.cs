@@ -1,17 +1,36 @@
-﻿using CacheExplorer.Model;
+﻿using CacheExplorer.Extensions;
+using CacheExplorer.Model;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web;
 
 namespace CacheExplorer.Helper
 {
     public static class iTunesHelper
     {
+        public static Result ImproveResult(Result match)
+        {
+            IEnumerable<Result> iTunesSuggestions = new List<Result>();
+            if (!string.IsNullOrEmpty(match.artistName) && !string.IsNullOrEmpty(match.trackName))
+            {
+                iTunesSuggestions = iTunesHelper.GetResults(match.artistName, match.trackName, match.collectionName);
+                iTunesSuggestions = iTunesSuggestions.OrderBy(o => o.trackName.Similarity(match.trackName)).ThenBy(o => o.collectionName.Similarity(match.collectionName));
+            }
+
+            using (var selectionDialog = new TagSelectionDialog(match, iTunesSuggestions))
+            {
+                var result = selectionDialog.ShowDialog();
+                if (result != System.Windows.Forms.DialogResult.OK)
+                {
+                    return null;
+                }
+                return selectionDialog.SelectedTag;
+            }
+        }
+
         public static IEnumerable<Result> GetResults(string interpret, string title, string album)
         {
             var query = $"{interpret} {title}";

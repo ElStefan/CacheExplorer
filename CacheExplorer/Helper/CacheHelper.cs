@@ -14,8 +14,10 @@ namespace CacheExplorer.Helper
 {
     public static class CacheHelper
     {
-        private static readonly string LocalPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        private const string ChromePath = @"\Google\Chrome\User Data\Default\Cache";
+        //private static readonly string LocalPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        private static readonly string LocalPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        //private const string ChromePath = @"\Google\Chrome\User Data\Default\Cache";
+        private const string ChromePath = @"\Google Play Music Desktop Player\Cache";
         private static readonly string TempDir = Environment.CurrentDirectory + @"\temp\";
 
         private static string ChromeCachePath
@@ -45,9 +47,9 @@ namespace CacheExplorer.Helper
                 CleanupTempDir();
                 return cacheFiles;
             }
-            var mediaFiles = cacheFiles.Where(o => HasMediaLenght(o)).ToList();
+            var mediaFiles = cacheFiles.Where(o => HasMediaLenght(o));
             CleanupTempDir();
-            return FindFilesAndMerge(mediaFiles);
+            return FindFilesAndMerge(mediaFiles).Where(o => o.Length > 0);
         }
 
         private static bool CreateTempDir()
@@ -97,14 +99,9 @@ namespace CacheExplorer.Helper
             }
             catch (Exception)
             {
-                if(file.FileSize % 32768 == 0)
-                {
-                    return true;
-                }
-                return false;
                 //ignore
             }
-            return true;
+            return true;         
             // so if taglib found a valid file, we let the shell check for real duration
             // this part will hurt every ssd..
 
@@ -154,6 +151,7 @@ namespace CacheExplorer.Helper
 
         public static IEnumerable<CacheFile> FindFilesAndMerge(IEnumerable<CacheFile> files)
         {
+
             var fileParts = FindFiles(files).Where(o => o.Any());
             var mergedFiles = new List<CacheFile>();
             foreach (var file in fileParts)
@@ -166,28 +164,39 @@ namespace CacheExplorer.Helper
 
         private static IEnumerable<IEnumerable<CacheFile>> FindFiles(IEnumerable<CacheFile> files)
         {
+            // TODO suche nach 32k, zähle immer *2 hoch bis 1024k solange die dateien zeitlich beieinander liegen und nimm die erste die kleiner als 1024k ist dazu und dann ist es eine datei.
+            // ignoriere kleinere dateien dazwischen
+
             var foundFiles = new List<List<CacheFile>>();
             var singleFile = new List<CacheFile>();
 
-            files = files.OrderBy(o => o.CreateDate);
-            var firstFile = files.FirstOrDefault();
+            files = files.OrderBy(o => o.FileName);
+            var firstFile = files.FirstOrDefault(o => Math.Abs(o.FileSize - Math.Pow(2, 15)) < double.Epsilon); // 32k
             if (firstFile == null)
             {
                 return foundFiles;
             }
             var currentTime = firstFile.CreateDate;
+            var currentFileSize = firstFile.FileSize;
             foreach (var item in files)
             {
-                if (item.CreateDate <= currentTime.AddSeconds(2))
+                if (item.CreateDate <= currentTime.AddSeconds(2) && (item.FileSize == 2 * currentFileSize || Math.Abs(item.FileSize - Math.Pow(2, 20)) < double.Epsilon || (item.FileSize < currentFileSize && Math.Abs(currentFileSize - Math.Pow(2, 20)) < double.Epsilon))) // next file was created within 2 seconds
                 {
-                    singleFile.Add(item);
+                    singleFile.Add(item); // is it 2 times bigger than before? || is it 1024? || was it 1024 before && is now smaller? then it belongs to the file before
                     currentTime = item.CreateDate;
+                    currentFileSize = item.FileSize;
                     continue;
                 }
+
+
+                // next file is older than 2 seconds before, so it's a new file
                 currentTime = item.CreateDate;
+                currentFileSize = item.FileSize;
                 foundFiles.Add(singleFile);
                 singleFile = new List<CacheFile> { item };
+                
             }
+
             if (singleFile.Any())
             {
                 foundFiles.Add(singleFile);
