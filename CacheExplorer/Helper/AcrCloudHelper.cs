@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using TagLib;
 
 namespace CacheExplorer.Helper
 {
@@ -31,14 +30,14 @@ namespace CacheExplorer.Helper
             var audioInfos = JsonConvert.DeserializeObject<AcrResult>(result);
             if (audioInfos == null)
             {
-                return  null;
+                return null;
             }
             if (!audioInfos.Status.Msg.Equals("success", StringComparison.OrdinalIgnoreCase))
             {
                 audioInfos = null;
             }
             var musicInfo = audioInfos?.Metadata.Music.OrderBy(o => o.ReleaseDate).FirstOrDefault();
-            if(musicInfo == null)
+            if (musicInfo == null)
             {
                 return null;
             }
@@ -48,9 +47,7 @@ namespace CacheExplorer.Helper
             var genres = musicInfo?.Genres?.Select(o => o.Name).ToList();
             var releaseDate = musicInfo?.ReleaseDate;
 
-            return new Result { artistName = artists.FirstOrDefault(), trackName = title, collectionName = album, primaryGenreName = genres.FirstOrDefault(), releaseDate = releaseDate };
+            return new Result { artistName = artists.FirstOrDefault(), trackName = title, collectionName = album, primaryGenreName = genres?.FirstOrDefault(), releaseDate = releaseDate };
         }
-
-        
     }
 }

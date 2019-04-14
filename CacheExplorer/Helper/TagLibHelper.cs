@@ -28,20 +28,13 @@ namespace CacheExplorer.Helper
                     file.Tag.Pictures = new[] { albumArt };
                 }
 
-                DateTime date2;
-                if (DateTime.TryParse(match.releaseDate, out date2))
+                if (DateTime.TryParse(match.releaseDate, out var date2))
                 {
                     file.Tag.Year = Convert.ToUInt32(date2.Year);
                 }
 
                 file.Save();
             }
-        }
-
-        private static bool FileHasTags(string filePath)
-        {
-            var tagLibFile = File.Create(filePath);
-            return !tagLibFile.Tag.IsEmpty;
         }
     }
 }

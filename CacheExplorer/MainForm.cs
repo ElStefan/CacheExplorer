@@ -63,7 +63,7 @@ namespace CacheExplorer
 
         private void ReadPlaybackApi(object sender, DoWorkEventArgs e)
         {
-            while(!_stop)
+            while (!_stop)
             {
                 try
                 {
@@ -72,7 +72,7 @@ namespace CacheExplorer
                     if (!string.IsNullOrEmpty(playbackItem.Id) && playbackItem.Id != "__")
                     {
                         playbackItem.StartDate = DateTime.Now - TimeSpan.FromMilliseconds(playbackItem.Time.Current);
-                        _playbackCache.AddOrUpdate(playbackItem.Id, playbackItem, (key,value) => playbackItem);                        
+                        _playbackCache.AddOrUpdate(playbackItem.Id, playbackItem, (key, value) => playbackItem);
                     }
                     Thread.Sleep(1000);
                 }
@@ -80,7 +80,6 @@ namespace CacheExplorer
                 {
                     //ignore
                 }
-                
             }
         }
 
@@ -154,7 +153,7 @@ namespace CacheExplorer
             this.fastObjectListViewCacheFiles.OverlayText = null;
         }
 
-        private void SaveFiles(string  fileName, List<CacheFile> items, bool merge)
+        private void SaveFiles(string fileName, List<CacheFile> items, bool merge)
         {
             var orderedItems = items.OrderBy(o => o.FileName).ToList();
             for (var i = 0; i < orderedItems.Count; i++)
@@ -182,7 +181,7 @@ namespace CacheExplorer
                 var fullFilename = $"{filename}{extension}";
                 File.WriteAllBytes(fullFilename, content);
 
-                if(extension.EndsWith("m4a", StringComparison.OrdinalIgnoreCase))
+                if (extension.EndsWith("m4a", StringComparison.OrdinalIgnoreCase))
                 {
                     ConvertM4A(fullFilename);
                     fullFilename = $"{filename}.mp3";
@@ -201,18 +200,17 @@ namespace CacheExplorer
             }
             var lyrics = match.lyrics;
             match = iTunesHelper.ImproveResult(match);
-            if(match != null)
+            if (match != null)
             {
                 match.lyrics = lyrics;
                 TagLibHelper.SetFileInfos(filePath, match);
                 RenameFileByTag(filePath);
             }
-
         }
 
         private Result TryReadPlaybackApi(List<CacheFile> cacheFiles)
         {
-            if(cacheFiles == null)
+            if (cacheFiles == null)
             {
                 return null;
             }
@@ -249,9 +247,9 @@ namespace CacheExplorer
 
         private static void ConvertM4A(string sourceFile)
         {
-            using (var engine = new MediaToolkit.Engine())
+            using (var engine = new MediaToolkit.Engine(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe")))
             {
-                var newFileName = sourceFile.Replace("m4a","mp3");
+                var newFileName = sourceFile.Replace("m4a", "mp3");
 
                 engine.CustomCommand($@"-i ""{sourceFile}"" -acodec libmp3lame -ab 320k {newFileName}");
 
