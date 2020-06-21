@@ -59,6 +59,23 @@ namespace CacheExplorer
             worker.DoWork += ReadPlaybackApi;
             worker.RunWorkerAsync();
             this.FormClosing += (sender, e) => _stop = true;
+
+            olvColumnFileName.AspectGetter = x =>
+            {
+                if (x is CacheFile file)
+                {
+                    if (_onlyMediaFiles)
+                    {
+                        var result = TryReadPlaybackApi(file);
+                        if (result != null)
+                        {
+                            return $"{result.artistName} - {result.trackName} - {TimeSpan.FromMilliseconds(result.trackTimeMillis)}";
+                        }
+                    }
+                    return file.FileName;
+                }
+                return null;
+            };
         }
 
         private void ReadPlaybackApi(object sender, DoWorkEventArgs e)
@@ -71,9 +88,21 @@ namespace CacheExplorer
                     var playbackItem = Newtonsoft.Json.JsonConvert.DeserializeObject<PlaybackModel>(File.ReadAllText(file));
                     if (!string.IsNullOrEmpty(playbackItem.Id) && playbackItem.Id != "__")
                     {
-                        playbackItem.StartDate = DateTime.Now - TimeSpan.FromMilliseconds(playbackItem.Time.Current);
+                        if (_playbackCache.TryGetValue(playbackItem.Id, out var cachedItem))
+                        {
+                            if (cachedItem.StartDate > DateTime.MinValue)
+                            {
+                                playbackItem.StartDate = cachedItem.StartDate;
+                            }
+                            else
+                            {
+                                playbackItem.StartDate = DateTime.Now - TimeSpan.FromMilliseconds(playbackItem.Time.Current);
+                            }
+                        }
+
                         _playbackCache.AddOrUpdate(playbackItem.Id, playbackItem, (key, value) => playbackItem);
                     }
+
                     Thread.Sleep(1000);
                 }
                 catch (Exception)
@@ -99,7 +128,7 @@ namespace CacheExplorer
             {
                 fromDate = DateTime.Now.AddMinutes(-5);
             }
-            var files = await Task.Run(() => CacheHelper.GetFiles(this._onlyMediaFiles, fromDate));
+            var files = await Task.Run(() => CacheHelper.GetFiles(this._onlyMediaFiles, fromDate).OrderBy(o => o.FileName));
             this.fastObjectListViewCacheFiles.SetObjects(files);
             this.fastObjectListViewCacheFiles.RebuildColumns();
             this.fastObjectListViewCacheFiles.OverlayText = null;
@@ -129,7 +158,6 @@ namespace CacheExplorer
 
         private async Task SaveFile(bool merge)
         {
-            this.fastObjectListViewCacheFiles.OverlayText = SavingOverlayText;
             var items = this.fastObjectListViewCacheFiles.SelectedObjects.Cast<CacheFile>().ToList();
             string fileName;
             using (var saveFileDialog = new SaveFileDialog())
@@ -146,6 +174,7 @@ namespace CacheExplorer
                 fileName = saveFileDialog.FileName;
             }
 
+            this.fastObjectListViewCacheFiles.OverlayText = SavingOverlayText;
             await Task.Run(() =>
             {
                 SaveFiles(fileName, items, merge);
@@ -187,7 +216,7 @@ namespace CacheExplorer
                     fullFilename = $"{filename}.mp3";
                 }
 
-                RecognizeFile(fullFilename, merge ? orderedItems : null);
+                RecognizeFile(fullFilename, orderedItems);
             }
         }
 
@@ -206,6 +235,24 @@ namespace CacheExplorer
                 TagLibHelper.SetFileInfos(filePath, match);
                 RenameFileByTag(filePath);
             }
+        }
+
+        private Result TryReadPlaybackApi(CacheFile cacheFile)
+        {
+            if (cacheFile == null)
+            {
+                return null;
+            }
+
+            var earliestStartDate = cacheFile.CreateDate.AddSeconds(-10); // min time to download before playing
+            var latestStartDate = cacheFile.CreateDate.AddSeconds(30); // max time between download and before playing next song
+            var playbackItem = _playbackCache.Values.OrderBy(o => o.StartDate).FirstOrDefault(o => o.StartDate > earliestStartDate && o.StartDate < latestStartDate);
+            if (playbackItem == null)
+            {
+                return null;
+            }
+
+            return new Result { GpmdpDataAvailable = true, trackName = playbackItem.Song.Title, artistName = playbackItem.Song.Artist, collectionName = playbackItem.Song.Album, lyrics = playbackItem.SongLyrics, trackTimeMillis = playbackItem.Time.Total };
         }
 
         private Result TryReadPlaybackApi(List<CacheFile> cacheFiles)
@@ -265,6 +312,7 @@ namespace CacheExplorer
             var newFileName = (tagLibFile.Tag.FirstAlbumArtist ?? tagLibFile.Tag.FirstArtist) + " - " + tagLibFile.Tag.Title + Path.GetExtension(file);
 #pragma warning restore CS0618
             newFileName = newFileName.Replace("?", "_");
+            newFileName = newFileName.Replace("/", "_");
             File.Move(file, Path.Combine(directory, newFileName));
         }
     }

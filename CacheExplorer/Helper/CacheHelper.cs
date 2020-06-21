@@ -2,6 +2,7 @@
 using CacheExplorer.Model;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -34,16 +35,18 @@ namespace CacheExplorer.Helper
             }
 
             var files = Directory.GetFiles(ChromeCachePath, "f_*");
-            var cacheFiles = files.AsParallel().Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), Content = File.ReadAllBytes(o), CreateDate = File.GetCreationTime(o) });
+            var cacheFiles = files.AsParallel().Select(o => new CacheFile { FilePath = o, FileName = Path.GetFileName(o), CreateDate = File.GetCreationTime(o) });
             if (fromDate.HasValue)
             {
                 cacheFiles = cacheFiles.Where(o => o.CreateDate >= fromDate.Value);
             }
+
             if (!onlyMediaFiles)
             {
                 CleanupTempDir();
                 return cacheFiles;
             }
+
             var mediaFiles = cacheFiles.Where(o => HasMediaLenght(o));
             CleanupTempDir();
             return FindFilesAndMerge(mediaFiles).Where(o => o.Length > 0);
@@ -119,36 +122,76 @@ namespace CacheExplorer.Helper
             // ignoriere kleinere dateien dazwischen
 
             var foundFiles = new List<List<CacheFile>>();
-            var singleFile = new List<CacheFile>();
 
-            files = files.OrderBy(o => o.FileName);
-            var firstFile = files.FirstOrDefault(o => Math.Abs(o.FileSize - Math.Pow(2, 15)) < double.Epsilon); // 32k
-            if (firstFile == null)
+            var fileList = files.OrderBy(o => o.FileName).ToList();
+            var currentTime = DateTime.MinValue;
+            var currentFileSize = 0;
+            var buffer = new List<CacheFile>();
+
+            foreach (var file in fileList)
             {
-                return foundFiles;
-            }
-            var currentTime = firstFile.CreateDate;
-            var currentFileSize = firstFile.FileSize;
-            foreach (var item in files)
-            {
-                if (item.CreateDate <= currentTime.AddSeconds(2) && (item.FileSize == 2 * currentFileSize || Math.Abs(item.FileSize - Math.Pow(2, 20)) < double.Epsilon || (item.FileSize < currentFileSize && Math.Abs(currentFileSize - Math.Pow(2, 20)) < double.Epsilon))) // next file was created within 2 seconds
+                if (file.FileSize == (int)Math.Pow(2, 15) || file.CreateDate > currentTime.AddSeconds(2))
                 {
-                    singleFile.Add(item); // is it 2 times bigger than before? || is it 1024? || was it 1024 before && is now smaller? then it belongs to the file before
-                    currentTime = item.CreateDate;
-                    currentFileSize = item.FileSize;
+                    // 32k is always the first file
+                    // or it is older than 2 seconds than the file before
+                    // if there is any file in the buffer, add it to the list
+                    if (buffer.Any())
+                    {
+                        Debug.WriteLine("Found file:");
+                        foreach (var item in buffer)
+                        {
+                            Debug.WriteLine(item.FileSize);
+                        }
+                        foundFiles.Add(buffer.ToList());
+                        buffer.Clear();
+                    }
+
+                    // start over with new settings
+                    currentTime = file.CreateDate;
+                    currentFileSize = file.FileSize;
+                    buffer.Add(file);
                     continue;
                 }
 
-                // next file is older than 2 seconds before, so it's a new file
-                currentTime = item.CreateDate;
-                currentFileSize = item.FileSize;
-                foundFiles.Add(singleFile);
-                singleFile = new List<CacheFile> { item };
-            }
+                if (file.FileSize == 2 * currentFileSize)
+                {
+                    // 2 times bigger than before, then it belongs to the same file
+                    buffer.Add(file);
+                    currentTime = file.CreateDate;
+                    currentFileSize = file.FileSize;
+                    continue;
+                }
 
-            if (singleFile.Any())
-            {
-                foundFiles.Add(singleFile);
+                if (file.FileSize == (int)Math.Pow(2, 20)) // is it 1024?
+                {
+                    // it is 1024kb, it may belong to the same file
+                    buffer.Add(file);
+                    currentTime = file.CreateDate;
+                    currentFileSize = file.FileSize;
+                    continue;
+                }
+
+                if (file.FileSize < currentFileSize && currentFileSize == (int)Math.Pow(2, 20)) // next file was created within 2 seconds
+                {
+                    // last file was 1024 and file is now smaller? then it belongs to the file before and is the end
+                    buffer.Add(file);
+                    currentTime = file.CreateDate;
+                    currentFileSize = file.FileSize;
+
+                    if (buffer.Any())
+                    {
+                        Debug.WriteLine("Found file:");
+                        foreach (var item in buffer)
+                        {
+                            Debug.WriteLine(item.FileSize);
+                        }
+                        foundFiles.Add(buffer.ToList());
+                        buffer.Clear();
+                    }
+                }
+
+                // lonely file
+                foundFiles.Add(new List<CacheFile> { file });
             }
 
             return foundFiles;
