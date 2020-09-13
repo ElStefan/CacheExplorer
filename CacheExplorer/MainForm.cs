@@ -261,7 +261,7 @@ namespace CacheExplorer
             {
                 return null;
             }
-            var earliestStartDate = cacheFiles.Max(o => o.CreateDate).AddSeconds(-10); // min time to download before playing
+            var earliestStartDate = cacheFiles.Min(o => o.CreateDate).AddSeconds(-10); // min time to download before playing
             var latestStartDate = cacheFiles.Max(o => o.CreateDate).AddSeconds(30); // max time between download and before playing next song
             var playbackItem = _playbackCache.Values.OrderBy(o => o.StartDate).FirstOrDefault(o => o.StartDate > earliestStartDate && o.StartDate < latestStartDate);
             if (playbackItem == null)
