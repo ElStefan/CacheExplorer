@@ -3,7 +3,6 @@ using CacheExplorer.Helper;
 using CacheExplorer.Model;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -31,8 +30,9 @@ namespace CacheExplorer
         }
       }
 
-      fastObjectListViewMatches.SetObjects(iTunesSuggestions?.ToList() ?? new List<Result>());
-      fastObjectListViewMatches.SelectedObject = iTunesSuggestions?.FirstOrDefault();
+      var list = iTunesSuggestions?.ToList() ?? new List<Result>();
+      fastObjectListViewMatches.SetObjects(list);
+      fastObjectListViewMatches.SelectedObject = list.FirstOrDefault();
     }
 
     public Result SelectedTag { get; internal set; }

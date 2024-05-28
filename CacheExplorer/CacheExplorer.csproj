@@ -185,6 +185,7 @@
     <Compile Include="Helper\iTunesHelper.cs" />
     <Compile Include="Helper\TagLibHelper.cs" />
     <Compile Include="Helper\WebHelper.cs" />
+    <Compile Include="Model\AcrCloudExtrTool.cs" />
     <Compile Include="Model\iTunesSearchResult.cs" />
     <Compile Include="Model\AcrCloudRecognizer.cs" />
     <Compile Include="MainForm.cs">

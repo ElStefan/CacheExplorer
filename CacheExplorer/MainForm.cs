@@ -6,7 +6,6 @@ using CefSharp;
 using CefSharp.WinForms;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -87,7 +86,7 @@ namespace CacheExplorer
 
       var cefSettings = new CefSettings
       {
-        CachePath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CefSharp\\Cache"),
+        CachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CefSharp\\Cache"),
         UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36 /CefSharp Browser" + Cef.CefSharpVersion
       };
       Cef.Initialize(cefSettings);
@@ -248,12 +247,11 @@ namespace CacheExplorer
       }
 
       var files = Directory.GetFiles(CustomResourceRequestHandler.OutputFolder, "*.mp3")
-        .Union(Directory.GetFiles(CustomResourceRequestHandler.OutputFolder, "*.m4a"));
-      var downloadFiles = files.Where(f => !_downloadFileCache.Any(df => df.FilePath == f)).AsParallel().Select(o => new DownloadFile(o));
+        .Union(Directory.GetFiles(CustomResourceRequestHandler.OutputFolder, "*.m4a")).ToList();
+      var downloadFiles = files.Where(f => _downloadFileCache.All(df => df.FilePath != f)).AsParallel().Select(o => new DownloadFile(o));
       _downloadFileCache.AddRange(downloadFiles);
       // remove files that no longer exist (= not in the new list)
       _downloadFileCache.RemoveAll(o => !files.Contains(o.FilePath));
-
 
       return _downloadFileCache;
     }
@@ -275,7 +273,7 @@ namespace CacheExplorer
       using (var saveFileDialog = new SaveFileDialog())
       {
         saveFileDialog.Title = "Save files as new file";
-        saveFileDialog.FileName = item.FileName;
+        saveFileDialog.FileName = item?.FileName;
         var result = saveFileDialog.ShowDialog();
         if (result != DialogResult.OK)
         {
@@ -381,13 +379,12 @@ namespace CacheExplorer
       catch (Exception exception)
       {
         Console.WriteLine(exception);
-        return;
       }
     }
 
     private static void RenameFileByTag(string file)
     {
-      var directory = Path.GetDirectoryName(file);
+      var directory = Path.GetDirectoryName(file) ?? string.Empty;
       var tagLibFile = TagLib.File.Create(file);
 #pragma warning disable CS0618 // using obsolete property "FirstArtist" because the real property is null...
       var newFileName = (tagLibFile.Tag.FirstAlbumArtist ?? tagLibFile.Tag.FirstArtist) + " - " + tagLibFile.Tag.Title + Path.GetExtension(file);

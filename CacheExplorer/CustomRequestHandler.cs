@@ -15,7 +15,7 @@ namespace CacheExplorer
     public const string OutputFolder = ".\\output";
     private const string RecentlyDownloadedCachePath = ".\\RecentlyDownloaded.txt";
     private static readonly HashSet<string> _recentlyDownloaded = new HashSet<string>();
-    private readonly System.IO.MemoryStream memoryStream = new System.IO.MemoryStream();
+    private readonly MemoryStream memoryStream = new MemoryStream();
 
     public CustomResourceRequestHandler()
     {
@@ -35,69 +35,68 @@ namespace CacheExplorer
       //You can now get the data from the stream
       var bytes = memoryStream.ToArray();
       // write base64 string to file
-      if (response.MimeType == "application/vnd.yt-ump")
+      if (response.MimeType != "application/vnd.yt-ump")
       {
-        try
-        {
-          // Decode the UMP parts
-          var umpDecoder = new UmpDecoder();
-          bytes = bytes.SkipWhile(x => x != 20).ToArray();
-          if (bytes.Length == 0)
-          {
-            return;
-          }
-
-          var videoId = umpDecoder.Decode(bytes);
-          if (_recentlyDownloaded.Contains(videoId))
-          {
-            return;
-          }
-
-          _recentlyDownloaded.Add(videoId);
-          _ = Task.Run(async () =>
-          {
-            var ytdl = new YoutubeDL();
-            // set the path of yt-dlp and FFmpeg if they're not in PATH or current directory
-            ytdl.YoutubeDLPath = ".\\ytdl\\yt-dlp.exe";
-            ytdl.FFmpegPath = ".\\ytdl\\ffmpeg.exe";
-            if (!File.Exists(ytdl.FFmpegPath))
-            {
-              ytdl.FFmpegPath = ".\\ffmpeg.exe";
-            }
-
-            var options = OptionSet.Default;
-            options.EmbedMetadata = true;
-            options.AudioFormat = AudioConversionFormat.Mp3;
-            options.AudioQuality = 0;
-            options.Part = true;
-            ytdl.OutputFolder = Path.Combine(OutputFolder, "temp");
-
-            if (!Directory.Exists(OutputFolder))
-            {
-              Directory.CreateDirectory(OutputFolder);
-              Directory.CreateDirectory("temp");
-            }
-            // download a video
-            var res = await ytdl.RunAudioDownload($"https://www.youtube.com/watch?v={videoId}", overrideOptions: options);
-            if (!res.Success)
-            {
-              _recentlyDownloaded.Remove(videoId);
-              return;
-            }
-
-            // move file to one folder level higher
-            File.Move(res.Data, Path.Combine(OutputFolder, Path.GetFileName(res.Data)));
-            File.AppendAllLines(RecentlyDownloadedCachePath, new[] { videoId });
-
-          });
-        }
-        catch (Exception)
-        {
-
-        }
-
+        return;
       }
 
+      try
+      {
+        // Decode the UMP parts
+        var umpDecoder = new UmpDecoder();
+        bytes = bytes.SkipWhile(x => x != 20).ToArray();
+        if (bytes.Length == 0)
+        {
+          return;
+        }
+
+        var videoId = umpDecoder.Decode(bytes);
+        if (!_recentlyDownloaded.Add(videoId))
+        {
+          return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+          var ytdl = new YoutubeDL();
+          // set the path of yt-dlp and FFmpeg if they're not in PATH or current directory
+          ytdl.YoutubeDLPath = ".\\ytdl\\yt-dlp.exe";
+          ytdl.FFmpegPath = ".\\ytdl\\ffmpeg.exe";
+          if (!File.Exists(ytdl.FFmpegPath))
+          {
+            ytdl.FFmpegPath = ".\\ffmpeg.exe";
+          }
+
+          var options = OptionSet.Default;
+          options.EmbedMetadata = true;
+          options.AudioFormat = AudioConversionFormat.Mp3;
+          options.AudioQuality = 0;
+          options.Part = true;
+          ytdl.OutputFolder = Path.Combine(OutputFolder, "temp");
+
+          if (!Directory.Exists(OutputFolder))
+          {
+            Directory.CreateDirectory(OutputFolder);
+            Directory.CreateDirectory("temp");
+          }
+          // download a video
+          var res = await ytdl.RunAudioDownload($"https://www.youtube.com/watch?v={videoId}", overrideOptions: options);
+          if (!res.Success)
+          {
+            _recentlyDownloaded.Remove(videoId);
+            return;
+          }
+
+          // move file to one folder level higher
+          File.Move(res.Data, Path.Combine(OutputFolder, Path.GetFileName(res.Data)));
+          File.AppendAllLines(RecentlyDownloadedCachePath, new[] { videoId });
+
+        });
+      }
+      catch (Exception)
+      {
+        // ignored
+      }
     }
   }
 
@@ -187,15 +186,30 @@ namespace CacheExplorer
     private int GetUmpVarIntSize(byte b)
     {
       if ((b & 0b10000000) == 0)
+      {
         return 1; // 0xxx xxxx - 1 byte encoding
+      }
+
       if ((b & 0b11000000) == 0b10000000)
+      {
         return 2; // 100x xxxx - 2 byte encoding
+      }
+
       if ((b & 0b11100000) == 0b11000000)
+      {
         return 3; // 1100 xxxx - 3 byte encoding
+      }
+
       if ((b & 0b11110000) == 0b11100000)
+      {
         return 4; // 1110 0xxx - 4 byte encoding
+      }
+
       if ((b & 0b11111000) == 0b11110000)
+      {
         return 5; // 1111 0xxx - 5 byte encoding
+      }
+
       throw new InvalidDataException("Invalid UMP varint encoding");
     }
 
@@ -209,7 +223,6 @@ namespace CacheExplorer
         {
           var fieldInfo = (int)ReadVarInt(data, ref pos);
           var fieldNumber = fieldInfo >> 3;
-          var wireType = fieldInfo & 0x07;
 
           //Console.WriteLine($"Field Info: {fieldInfo}, Field Number: {fieldNumber}, Wire Type: {wireType}");
 
