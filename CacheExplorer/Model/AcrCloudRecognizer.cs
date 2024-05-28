@@ -150,11 +150,11 @@ namespace CacheExplorer
                 }
                 catch (WebException e)
                 {
-                    Console.WriteLine("timeout:\n" + e);
+                    Debug.WriteLine("timeout:\n" + e);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("other excption:" + e);
+                    Debug.WriteLine("other excption:" + e);
                 }
 
                 return result;

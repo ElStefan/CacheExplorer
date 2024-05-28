@@ -11,13 +11,18 @@ namespace CacheExplorer.Helper
 {
     public static class iTunesHelper
     {
-        public static Result ImproveResult(Result match)
+        public static Result ImproveResult(Result match, bool automatic)
         {
             IEnumerable<Result> iTunesSuggestions = new List<Result>();
             if (!string.IsNullOrEmpty(match.artistName) && !string.IsNullOrEmpty(match.trackName))
             {
                 iTunesSuggestions = iTunesHelper.GetResults(match.artistName, match.trackName, match.collectionName);
                 iTunesSuggestions = iTunesSuggestions.OrderBy(o => o.trackName.Similarity(match.trackName)).ThenBy(o => o.collectionName.Similarity(match.collectionName));
+            }
+
+            if (automatic)
+            {
+                return iTunesSuggestions.FirstOrDefault();
             }
 
             using (var selectionDialog = new TagSelectionDialog(match, iTunesSuggestions))
