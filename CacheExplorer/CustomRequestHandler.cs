@@ -58,38 +58,48 @@ namespace CacheExplorer
 
         _ = Task.Run(async () =>
         {
-          var ytdl = new YoutubeDL();
-          // set the path of yt-dlp and FFmpeg if they're not in PATH or current directory
-          ytdl.YoutubeDLPath = ".\\ytdl\\yt-dlp.exe";
-          ytdl.FFmpegPath = ".\\ytdl\\ffmpeg.exe";
-          if (!File.Exists(ytdl.FFmpegPath))
+          try
           {
-            ytdl.FFmpegPath = ".\\ffmpeg.exe";
-          }
+            var ytdl = new YoutubeDL();
+            // set the path of yt-dlp and FFmpeg if they're not in PATH or current directory
+            ytdl.YoutubeDLPath = ".\\ytdl\\yt-dlp.exe";
+            ytdl.FFmpegPath = ".\\ytdl\\ffmpeg.exe";
+            if (!File.Exists(ytdl.FFmpegPath))
+            {
+              ytdl.FFmpegPath = ".\\ffmpeg.exe";
+            }
 
-          var options = OptionSet.Default;
-          options.EmbedMetadata = true;
-          options.AudioFormat = AudioConversionFormat.Mp3;
-          options.AudioQuality = 0;
-          options.Part = true;
-          ytdl.OutputFolder = Path.Combine(OutputFolder, "temp");
+            var options = OptionSet.Default;
+            options.EmbedMetadata = true;
+            options.AudioFormat = AudioConversionFormat.Mp3;
+            options.AudioQuality = 0;
+            options.Part = true;
+            options.RestrictFilenames = true;
+            options.WindowsFilenames = true;
+            ytdl.OutputFolder = Path.Combine(OutputFolder, "temp");
+            ytdl.OverwriteFiles = true;
 
-          if (!Directory.Exists(OutputFolder))
-          {
-            Directory.CreateDirectory(OutputFolder);
-            Directory.CreateDirectory("temp");
+            if (!Directory.Exists(OutputFolder))
+            {
+              Directory.CreateDirectory(OutputFolder);
+              Directory.CreateDirectory("temp");
+            }
+            // download a video
+            var res = await ytdl.RunAudioDownload($"https://www.youtube.com/watch?v={videoId}", overrideOptions: options);
+            if (!res.Success)
+            {
+              _recentlyDownloaded.Remove(videoId);
+              return;
+            }
+
+            // move file to one folder level higher
+            File.Move(res.Data, Path.Combine(OutputFolder, Path.GetFileName(res.Data)));
+            File.AppendAllLines(RecentlyDownloadedCachePath, new[] { videoId });
           }
-          // download a video
-          var res = await ytdl.RunAudioDownload($"https://www.youtube.com/watch?v={videoId}", overrideOptions: options);
-          if (!res.Success)
+          catch (Exception e)
           {
             _recentlyDownloaded.Remove(videoId);
-            return;
           }
-
-          // move file to one folder level higher
-          File.Move(res.Data, Path.Combine(OutputFolder, Path.GetFileName(res.Data)));
-          File.AppendAllLines(RecentlyDownloadedCachePath, new[] { videoId });
 
         });
       }

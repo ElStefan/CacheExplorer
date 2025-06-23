@@ -76,6 +76,12 @@ namespace CacheExplorer
 
       Task.Run(() =>
       {
+        var tooOld = File.GetLastWriteTime(Path.Combine(".\\ytdl", "yt-dlp.exe")) < DateTime.Now.AddMonths(-6);
+        if (tooOld)
+        {
+          Directory.Delete(".\\ytdl", true);
+          Debug.WriteLine("Re-Downloading yt-dlp and ffmpeg...");
+        }
         if (!Directory.Exists(".\\ytdl"))
         {
           Directory.CreateDirectory(".\\ytdl");
@@ -189,6 +195,7 @@ namespace CacheExplorer
 
       if (!Directory.Exists(path))
       {
+        Debug.WriteLine($"File not found in library for Artist '{artist}' in path '{path}'");
         return false;
       }
 
@@ -200,8 +207,15 @@ namespace CacheExplorer
 
       filetitle = filetitle.Substring(0, Math.Min(20, filetitle.Length));
 
-      var files = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
-      return files.Any(o => o.IndexOf(filetitle, StringComparison.OrdinalIgnoreCase) >= 0);
+      var files = Directory.GetFiles(path, "*", SearchOption.AllDirectories)
+        .Select(Path.GetFileName).ToList();
+      var exists = files.Any(o => o.IndexOf(filetitle, StringComparison.OrdinalIgnoreCase) >= 0);
+      if (!exists)
+      {
+        Debug.WriteLine($"File not found in library for Artist '{artist}' using title '{filetitle}'");
+      }
+
+      return exists;
     }
 
     private void refreshToolStripMenuItem_Click(object sender, EventArgs e)

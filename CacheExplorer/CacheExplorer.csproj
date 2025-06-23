@@ -31,7 +31,7 @@
     <MapFileExtensions>true</MapFileExtensions>
     <WebPage>publish.htm</WebPage>
     <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
-    <ApplicationRevision>7</ApplicationRevision>
+    <ApplicationRevision>8</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>
@@ -64,10 +64,10 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>2EEEEED446BDF45DEE899516BB140A66899ED4CA</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>3A965AFA580687C362747149F91AE413BF5D1B2C</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>CacheExplorer_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>CacheExplorer_1_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <GenerateManifests>true</GenerateManifests>
@@ -173,8 +173,8 @@
     <Reference Include="Xabe.FFmpeg, Version=4.4.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Xabe.FFmpeg.4.4.0\lib\netstandard2.0\Xabe.FFmpeg.dll</HintPath>
     </Reference>
-    <Reference Include="YoutubeDLSharp, Version=1.1.0.246, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\YoutubeDLSharp.1.1.0\lib\net45\YoutubeDLSharp.dll</HintPath>
+    <Reference Include="YoutubeDLSharp, Version=1.1.2.25113, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\YoutubeDLSharp.1.1.2\lib\net45\YoutubeDLSharp.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -221,6 +221,7 @@
     <EmbeddedResource Include="TagSelectionDialog.resx">
       <DependentUpon>TagSelectionDialog.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="CacheExplorer_1_TemporaryKey.pfx" />
     <None Include="CacheExplorer_TemporaryKey.pfx" />
     <None Include="packages.config">
       <SubType>Designer</SubType>

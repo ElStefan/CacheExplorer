@@ -3,6 +3,7 @@ using CacheExplorer.Model;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Web;
@@ -51,20 +52,28 @@ namespace CacheExplorer.Helper
       {
         var result = client.GetAsync(baseUrl + urlEncodedQuery + "&media=music&country=AT").Result;
         var content = result.Content.ReadAsStringAsync().Result;
-        var searchResult = JsonConvert.DeserializeObject<iTunesSearchResult>(content);
-        searchResult.results = searchResult.results.Where(o => o.kind == "song").ToList();
-        if (searchResult.resultCount == 0 && title.Contains("("))
+        try
         {
-          title = title.Substring(0, title.IndexOf("(", StringComparison.Ordinal));
-          return GetResults(interpret, title, album);
-        }
+          var searchResult = JsonConvert.DeserializeObject<iTunesSearchResult>(content);
+          searchResult.results = searchResult.results.Where(o => o.kind == "song").ToList();
+          if (searchResult.resultCount == 0 && title.Contains("("))
+          {
+            title = title.Substring(0, title.IndexOf("(", StringComparison.Ordinal));
+            return GetResults(interpret, title, album);
+          }
 
-        if (searchResult.resultCount == 0 && !String.IsNullOrEmpty(album))
+          if (searchResult.resultCount == 0 && !String.IsNullOrEmpty(album))
+          {
+            return GetResults(interpret, title, string.Empty);
+          }
+
+          return searchResult.results;
+        }
+        catch (Exception e)
         {
-          return GetResults(interpret, title, string.Empty);
+          Debug.WriteLine(e);
+          return new List<Result>();
         }
-
-        return searchResult.results;
       }
     }
   }
